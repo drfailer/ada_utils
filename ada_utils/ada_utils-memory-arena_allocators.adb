@@ -1,7 +1,12 @@
 with System;
 with System.Storage_Elements; use System.Storage_Elements;
+with System.Address_To_Access_Conversions;
 
 package body Ada_Utils.Memory.Arena_Allocators is
+
+    --
+    -- Functions
+    --
 
     function Allocate (A: in out Arena; Size: Storage_Count; Align: Storage_Count := DEFAULT_ALIGNMENT) return System.Address is
         Base_Addr : Integer_Address := To_Integer (A.Buffer (A.Buffer'First)'Address);
@@ -17,7 +22,7 @@ package body Ada_Utils.Memory.Arena_Allocators is
         return To_Address (Addr);
     end Allocate;
 
-    function Resize (A: in out Arena; Old_Addr: System.Address; Old_Size: Storage_Count; New_Size: Storage_Count; Align: Storage_Count := DEFAULT_ALIGNMENT) return System.Address is
+    function Resize (A: in out Arena; Old_Addr: System.Address; Old_Size, New_Size: Storage_Count; Align: Storage_Count := DEFAULT_ALIGNMENT) return System.Address is
         Addr      : Integer_Address := To_Integer (Old_Addr);
         Last_Addr : Integer_Address := To_Integer (A.Last_Allocated_Address);
     begin
@@ -61,5 +66,23 @@ package body Ada_Utils.Memory.Arena_Allocators is
     end Deallocate;
 
     function Storage_Size(Pool: Arena) return Storage_Count is (Pool.Size);
+
+    --
+    -- Allocator API
+    --
+
+    procedure Allocator_Proc (Op: Allocator_Operation; Data: System.Address; Old_Size, New_Size, Align: Storage_Count; Old_Addr: System.Address; Result_Addr: in out System.Address) is
+        package Arena_Ptr_Cast is new System.Address_To_Access_Conversions (Arena);
+        A: Arena_Ptr_Cast.Object_Pointer := Arena_Ptr_Cast.To_Pointer (Data);
+    begin
+        case Op is
+        when Alloc_Op_Allocate => Result_Addr := Allocate (A.all, New_Size, Align);
+        when Alloc_Op_Free => null;
+        when Alloc_Op_Free_All => Free_All (A.all);
+        when Alloc_Op_Resize => Result_Addr := Resize (A.all, Old_Addr, Old_Size, New_Size, Align);
+        end case;
+    end Allocator_Proc;
+
+    function Make_Allocator (A: in out Arena) return Allocator is (Allocator'(Data => A'Address, Proc => Allocator_Proc'Access));
 
 end Ada_Utils.Memory.Arena_Allocators;
