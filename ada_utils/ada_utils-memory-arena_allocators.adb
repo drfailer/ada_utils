@@ -3,21 +3,6 @@ with System.Storage_Elements; use System.Storage_Elements;
 
 package body Ada_Utils.Memory.Arena_Allocators is
 
-    function Align_Forward (Addr: Integer_Address; Align: Integer_Address) return Integer_Address is
-        Result_Addr: Integer_Address := Addr;
-        Modulo: Integer_Address;
-    begin
-        if (Align and (Align - 1)) /= 0 then
-            raise Constraint_Error with "alignment must be a power of 2";
-        end if;
-
-        Modulo := Addr and (Align - 1);
-        if Modulo /= 0 then
-            Result_Addr := Addr + (Align - Modulo);
-        end if;
-        return Result_Addr;
-    end Align_Forward;
-
     function Allocate (A: in out Arena; Size: Storage_Count; Align: Storage_Count := DEFAULT_ALIGNMENT) return System.Address is
         Base_Addr : Integer_Address := To_Integer (A.Buffer (A.Buffer'First)'Address);
         Curr_Addr : Integer_Address := To_Integer (A.Buffer (A.Offset)'Address);
